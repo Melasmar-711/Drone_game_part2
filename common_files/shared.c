@@ -6,9 +6,9 @@
 
 
 
-int create_and_open_fifo(const char *template, int identifier, int flags) {
+int create_and_open_fifo(const char *t, int identifier, int flags) {
     char fifo_name[256];
-    snprintf(fifo_name, sizeof(fifo_name), template, identifier);
+    snprintf(fifo_name, sizeof(fifo_name), t, identifier);
 
     if (mkfifo(fifo_name, 0666) < 0 && errno != EEXIST) {
         perror("Failed to create FIFO");
@@ -25,9 +25,9 @@ int create_and_open_fifo(const char *template, int identifier, int flags) {
 }
 
 
-void unlink_fifo(const char *template, int identifier) {
+void unlink_fifo(const char *t, int identifier) {
     char fifo_name[256];
-    snprintf(fifo_name, sizeof(fifo_name), template, identifier);
+    snprintf(fifo_name, sizeof(fifo_name), t, identifier);
 
     if (unlink(fifo_name) < 0) {
         perror("Failed to unlink FIFO");
@@ -36,7 +36,7 @@ void unlink_fifo(const char *template, int identifier) {
     }
 }
 
-ServerState initialize_server_state() {
+ServerState initialize_server_state(int n_obstacles, int n_targets) {
     return (ServerState){
         .drone_x = 10,
         .drone_y = 7,
@@ -46,10 +46,12 @@ ServerState initialize_server_state() {
         .resultant_force_y = 0,
         .velocity_x = 0,
         .velocity_y = 0,
-        .num_obstacles = MAX_OBSTACLES,
-        .num_targets = MAX_TARGETS,
+        .num_obstacles = n_obstacles,
+        .num_targets = n_targets,
     };
 }
+
+
 
 
 
@@ -140,5 +142,112 @@ int get_int_from_json(const char *filename, const char *key, int *value) {
     // Store the retrieved value
     *value = json_value->valueint; 
     cJSON_Delete(json);
+    return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+int write_int_to_json(const char *filename, const char *key, int value) {
+    // Open the file
+    FILE *file = fopen(filename, "r+");
+    if (file == NULL) {
+        perror("Failed to open JSON file");
+        return -1;
+    }
+
+    // Determine the file size
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // Handle empty files
+    if (length == 0) {
+        fprintf(stderr, "Error: JSON file is empty\n");
+        fclose(file);
+        return -1;
+    }
+
+    // Allocate memory for the file content
+    char *data = (char *)malloc(length + 1);
+    if (data == NULL) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return -1;
+    }
+
+    // Read the file content
+    size_t bytes_read = fread(data, 1, length, file);
+    if (bytes_read != length) {
+        perror("Failed to read JSON file");
+        free(data);
+        fclose(file);
+        return -1;
+    }
+    data[length] = '\0'; // Null-terminate the string
+
+    // Parse the JSON data
+    cJSON *json = cJSON_Parse(data);
+    free(data); // Free the file content buffer
+    if (json == NULL) {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL) {
+            fprintf(stderr, "Error parsing JSON: %s\n", error_ptr);
+        }
+        fclose(file);
+        return -1;
+    }
+
+    // Update the value associated with the key
+    cJSON *json_value = cJSON_GetObjectItemCaseSensitive(json, key);
+    if (json_value == NULL) {
+        // If the key does not exist, create it
+        json_value = cJSON_CreateNumber(value);
+        cJSON_AddItemToObject(json, key, json_value);
+    } else {
+        // If the key exists, update its value
+        if (!cJSON_IsNumber(json_value)) {
+            fprintf(stderr, "Key '%s' is not a number\n", key);
+            cJSON_Delete(json);
+            fclose(file);
+            return -1;
+        }
+        json_value->valueint = value;
+    }
+
+    // Convert the JSON object to a string
+    char *updated_data = cJSON_Print(json);
+    cJSON_Delete(json);
+    if (updated_data == NULL) {
+        perror("Failed to print JSON");
+        fclose(file);
+        return -1;
+    }
+
+    // Write the updated JSON data back to the file
+    fseek(file, 0, SEEK_SET);
+    if (fwrite(updated_data, 1, strlen(updated_data), file) != strlen(updated_data)) {
+        perror("Failed to write JSON file");
+        free(updated_data);
+        fclose(file);
+        return -1;
+    }
+    free(updated_data);
+
+    // Truncate the file to the new length
+    if (ftruncate(fileno(file), strlen(updated_data)) != 0) {
+        perror("Failed to truncate JSON file");
+        fclose(file);
+        return -1;
+    }
+
+    fclose(file);
     return 0;
 }

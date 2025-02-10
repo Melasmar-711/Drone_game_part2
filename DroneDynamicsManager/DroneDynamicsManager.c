@@ -51,7 +51,7 @@ start:
 
 
 
-    ServerState state = {0};
+    
     Vector_2D velocity = {0, 0};
     Vector_2D acceleration = {0, 0};
 
@@ -59,7 +59,27 @@ start:
     struct timeval timeout = {0, 0};
 
   
-    ServerState prev_state = initialize_server_state();
+
+    int n_obstacles;
+    int n_targets;
+
+    // Retrieve the number of obstacles and targets from the JSON configuration file
+    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
+    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);  // initialize a Server state
+
+    ServerState state = initialize_server_state(n_obstacles, n_targets);
+    state.drone_x = 0;  
+    state.drone_y = 0;
+    state.velocity_x = 0;
+    state.velocity_y = 0;
+    state.input_x_force = 0;
+    state.input_y_force = 0;
+    state.resultant_force_x = 0;
+    state.resultant_force_y = 0;
+    state.num_obstacles = n_obstacles;
+    state.num_targets = n_targets;
+
+    ServerState prev_state = initialize_server_state(n_obstacles, n_targets);
 
 
 
@@ -73,7 +93,12 @@ start:
 
 
 
-    
+    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
+    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);  // initialize a Server state
+    prev_state.num_obstacles = n_obstacles;
+    prev_state.num_targets = n_targets;
+    state.num_obstacles = n_obstacles;
+    state.num_targets = n_targets;
 
     // Retrieve the FPS value
     get_int_from_json("../Game_Config.json", "FPS", &fps_value);
@@ -94,7 +119,7 @@ start:
         int activity = select(fd_server_to_Dynamics + 1, &read_fds, NULL, NULL, &timeout);
 
         if(activity>0){
-        ssize_t bytes = read(fd_server_to_Dynamics, &state, sizeof(ServerState));
+        ssize_t bytes = read(fd_server_to_Dynamics, &state, sizeof(prev_state));
         }
         
 

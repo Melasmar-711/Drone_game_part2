@@ -32,6 +32,7 @@ start:
 
         fifo_id++;
         reset=false;
+        
         usleep(10000);
 
     }
@@ -70,10 +71,15 @@ start:
 
 
 
+    int n_obstacles;
+    int n_targets;
+
+    // Retrieve the number of obstacles and targets from the JSON configuration file
+    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
+    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets); 
 
 
-    // initialize a Server state
-    ServerState state = initialize_server_state() ;   
+    ServerState state = initialize_server_state( n_obstacles,n_targets);   
 
     KeyboardInput prev_input={0};
     KeyboardInput input={0};
@@ -82,6 +88,17 @@ start:
 
 
     while (1) {
+
+
+
+    // Retrieve the number of obstacles and targets from the JSON configuration file
+    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
+    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);
+
+    state.num_obstacles = n_obstacles;
+    state.num_targets = n_targets;
+    
+
 
 
     int fps_value;
@@ -158,14 +175,14 @@ start:
 
         // Handle input from Target Generator
         if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
-            int new_targets[MAX_TARGETS][2];
+            int new_targets[n_targets][2];
             ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
             if (bytes_read == sizeof(new_targets)) {
                 // Copy data into state struct
                 memcpy(state.targets, new_targets, sizeof(new_targets));
-                state.num_targets = MAX_TARGETS;
+                state.num_targets = n_targets;
 
-            for (int i = 0; i < MAX_TARGETS; i++) {
+            for (int i = 0; i < n_targets; i++) {
                 printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
             }
             }
@@ -173,16 +190,16 @@ start:
         
         // Handle input from Obstacle Generator
         if (FD_ISSET(fd_obstacle_generator_to_server, &read_fds)) {
-            int new_obstacles[MAX_OBSTACLES][2];
+            int new_obstacles[n_obstacles][2];
             ssize_t bytes_read = read(fd_obstacle_generator_to_server, new_obstacles, sizeof(new_obstacles));
             if (bytes_read == sizeof(new_obstacles)) {
                 // Copy data into state struct
                 memcpy(state.obstacles, new_obstacles, sizeof(new_obstacles));
-                state.num_obstacles = MAX_OBSTACLES;
+                state.num_obstacles = n_obstacles;
                 new_obstacle_arrived = true;
                 // Print received obstacles
                 printf("Received %d obstacles:\n", state.num_obstacles);
-                for (int i = 0; i < MAX_OBSTACLES; i++) {
+                for (int i = 0; i < n_obstacles; i++) {
                     printf("Obstacle %d: (%d, %d)\n", i, state.obstacles[i][0], state.obstacles[i][1]);
                 }
             } else {
@@ -243,6 +260,7 @@ start:
         close(fd_server_to_GameWindow);
         close(fd_target_generator_to_server);
         close(fd_obstacle_generator_to_server);
+
         goto start;
 
     }

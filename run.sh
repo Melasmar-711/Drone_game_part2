@@ -1,5 +1,24 @@
 #!/bin/bash
 
+
+
+# Check if the correct number of arguments is provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <subscriber|publisher>"
+    exit 1
+fi
+
+# Assign the argument to a variable
+MODE=$1
+
+# Validate the argument
+if [ "$MODE" != "subscriber" ] && [ "$MODE" != "publisher" ]; then
+    echo "Invalid argument: $MODE. Use 'subscriber' or 'publisher'."
+    exit 1
+fi
+
+
+
 # Clean up any existing blackboard pipe (if it exists)
 if [ -e "blackboard_pipe" ]; then
     echo "Removing existing blackboard_pipe..."
@@ -68,8 +87,8 @@ gnome-terminal -- ./BlackBoardServer/BlackBoardServer &
 gnome-terminal -- ./DroneDynamicsManager/DroneDynamicsManager &
 gnome-terminal --geometry=110x40+0+0 -- bash -c "./GameWindow/GameWindow; exec bash" &
 gnome-terminal -- ./KeyboardManager/KeyboardManager &
-gnome-terminal -- ./Targets_Generator/Targets_Generator &
+gnome-terminal -- ./Targets_Generator/Targets_Generator "$MODE" &
 gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator &
 
-sleep 2
-gnome-terminal -- ./WatchDog/WatchDog &
+#sleep 2
+#gnome-terminal -- ./WatchDog/WatchDog &

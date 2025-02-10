@@ -53,25 +53,50 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         attroff(COLOR_PAIR(1));
     }
 
+
+
+
+
     // Handle obstacles
-    for (int i = 0; i < MAX_OBSTACLES; i++) 
+    /*Handle whether the obstacles were moved or their number increased or decreased*/
+    for (int i = 0; i < prev_state->num_obstacles; i++) 
     {
 
         attron(COLOR_PAIR(3));
             // Check if an obstacle moved
+
+            
         if (prev_state->obstacles[i][0] != current_state->obstacles[i][0] ||
                 prev_state->obstacles[i][1] != current_state->obstacles[i][1]) 
             {
-                mvprintw(prev_state->obstacles[i][1], prev_state->obstacles[i][0], " "); // Erase old position
-                mvprintw(current_state->obstacles[i][1], current_state->obstacles[i][0], "O"); // Draw new position
+                mvprintw(prev_state->obstacles[i][1], prev_state->obstacles[i][0]," "); // Erase old position
+                //mvprintw(current_state->obstacles[i][1], current_state->obstacles[i][0], "O"); // Draw new position
             }
-        attroff(COLOR_PAIR(3));
+        
+    }
+    
+    if(current_state->num_obstacles!=prev_state->num_obstacles){
+        for(int i=0;i<current_state->num_obstacles;i++){
+            mvprintw(current_state->obstacles[i][1], current_state->obstacles[i][0],"O");
+        }
     }
 
+    else{
+        for (int i = 0; i < prev_state->num_obstacles; i++) {
+            mvprintw(current_state->obstacles[i][1], current_state->obstacles[i][0], "O"); 
+        }
+    }
 
+    attroff(COLOR_PAIR(3));
     
+
+
+
+
+
     // Handle targets
-    for (int i = 0; i < current_state->num_targets; i++) {
+    /*Handle whether targets were collected , increasedd ,decreased*/
+    for (int i = 0; i < prev_state->num_targets; i++) {
 
 
         static int prev_flags[MAX_TARGETS] = {0};
@@ -87,15 +112,18 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         int dy = current_state->drone_y - current_state->targets[i][1];
         double distance = sqrt(dx * dx + dy * dy);
 
+
         if (distance<0.2 && prev_flags[i]!=1 )
         {
             flags[i]=1;  // this means it's taken now
             prev_flags[i]=1;
             score++;
-
         }
         attron(COLOR_PAIR(2));
         
+
+
+
         if (flags[i]==1 ) 
         {
             // Target removed
@@ -104,15 +132,13 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         } 
 
  
+
+
+
         if (prev_state->targets[i][0] != current_state->targets[i][0] || prev_state->targets[i][1] != current_state->targets[i][1])      
         {
-
-
-                mvprintw(prev_state->targets[i][1], prev_state->targets[i][0], " "); // Erase old position
-                
+                mvprintw(prev_state->targets[i][1], prev_state->targets[i][0], " "); // Erase old position                
                 mvprintw(current_state->targets[i][1], current_state->targets[i][0], "T"); // Draw new position
-
-
         }
 
 
@@ -125,5 +151,14 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         attroff(COLOR_PAIR(2));
 
     }
+
+   if(current_state->num_targets!=prev_state->num_targets){
+        for(int i=0;i<current_state->num_targets;i++){
+            mvprintw(current_state->targets[i][1], current_state->targets[i][0],"T");
+        }
+    }
+
+
+
 }
 

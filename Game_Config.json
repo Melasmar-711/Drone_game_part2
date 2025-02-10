@@ -1,6 +1,8 @@
 {
     "MAX_X":100,
     "MAX_Y":30,
+    "num_of_obstacles":20,
+    "num_of_targets":30,
     "FPS":30,
     "enabled": true
 }

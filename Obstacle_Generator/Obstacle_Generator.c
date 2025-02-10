@@ -21,6 +21,11 @@ int main() {
     get_int_from_json("../Game_Config.json","MAX_Y",&MAX_Y);
     get_int_from_json("../Game_Config.json","FPS",&fps_value);
 
+    int n_obstacles;
+    get_int_from_json("../Game_Config.json","num_of_obstacles",&n_obstacles);
+
+
+
 start:
 
     if(reset){
@@ -30,6 +35,8 @@ start:
         reset=false;
         get_int_from_json("../Game_Config.json","MAX_X",&MAX_X);
         get_int_from_json("../Game_Config.json","MAX_Y",&MAX_Y);
+        get_int_from_json("../Game_Config.json","num_of_obstacles",&n_obstacles);
+        get_int_from_json("../Game_Config.json","FPS",&fps_value);
         usleep(10000);
 
     }
@@ -41,8 +48,8 @@ start:
 
     // Create FIFO
     int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_WRONLY);
-    int num_obstacles = MAX_OBSTACLES; 
-    int obstacles[MAX_OBSTACLES][2];
+    int num_obstacles = n_obstacles; 
+    int obstacles[n_obstacles][2];
 
 
     while (!stop) {

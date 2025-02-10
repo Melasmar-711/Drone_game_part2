@@ -16,6 +16,11 @@ int main() {
     get_int_from_json("../Game_Config.json","MAX_X",&MAX_X);
     get_int_from_json("../Game_Config.json","MAX_Y",&MAX_Y);
 
+    int n_obstacles;
+    int n_targets;
+    get_int_from_json("../Game_Config.json","num_of_obstacles",&n_obstacles);
+    get_int_from_json("../Game_Config.json","num_of_targets",&n_targets);
+
 
     signal(SIGUSR1, handle_pause_signal);
     signal(SIGUSR2, handle_reset_signal);
@@ -40,29 +45,23 @@ start:
         reset=false;
         log_message(log_file, INFO, "GameWindow reset.");
         usleep(10000);
-
+        
         get_int_from_json("../Game_Config.json","MAX_X",&MAX_X);
         get_int_from_json("../Game_Config.json","MAX_Y",&MAX_Y);
+        get_int_from_json("../Game_Config.json","num_of_obstacles",&n_obstacles);
+        get_int_from_json("../Game_Config.json","num_of_targets",&n_targets);
 
     }
 
 
     int fd_server_to_GameWindow = create_and_open_fifo("/tmp/server_to_GameWindow_%d",fifo_id, O_RDONLY|O_NONBLOCK);
 
-    
+
+
+
+
     // Server state
-    ServerState state = {
-        .drone_x = 10,
-        .drone_y = 7,
-        .input_x_force = 0,
-        .input_y_force = 0,
-        .resultant_force_x = 0,
-        .resultant_force_y = 0,
-        .velocity_x = 0,
-        .velocity_y = 0,
-        .num_obstacles = MAX_OBSTACLES,
-        .num_targets = MAX_TARGETS,
-    };
+    ServerState state=initialize_server_state(n_obstacles,n_targets);
 
 
     int target_active_flags[state.num_obstacles];
@@ -70,7 +69,12 @@ start:
 
 
 
-    ServerState prev_state={0};
+    ServerState prev_state=initialize_server_state(n_obstacles,n_targets);
+    prev_state.drone_x=0;
+    prev_state.drone_y=0;
+    prev_state.velocity_x=0;
+    prev_state.velocity_y=0;
+
     init_ncurses();
     draw_borders(MAX_X, MAX_Y);
 
@@ -78,6 +82,8 @@ start:
 
 
     while (!stop) {
+
+
 
 
         if (is_paused) {
@@ -88,7 +94,7 @@ start:
 
 
 
-        ssize_t bytes_read = read(fd_server_to_GameWindow, &state, sizeof(ServerState));
+        ssize_t bytes_read = read(fd_server_to_GameWindow, &state, sizeof(prev_state));
 
         if(bytes_read!=sizeof(ServerState)){
             log_message(log_file, ERROR, "Failed to read the correct number of bytes from server.");
@@ -109,6 +115,7 @@ start:
 
         if(reset){
             close(fd_server_to_GameWindow);
+
             goto start;
         }
 
