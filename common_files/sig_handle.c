@@ -29,6 +29,7 @@ void handle_reset_signal(int sig) {
 
 void handle_stop_signal(int sig) {
     if (sig == SIGINT) {
+        
         stop = true;
         printf("Pause state toggled: %s\n", stop ? "stopped" : "Running");
     }

@@ -33,5 +33,5 @@ add_subdirectory(GameWindow)
 add_subdirectory(DroneDynamicsManager)
 add_subdirectory(BlackBoardServer)
 add_subdirectory(WatchDog)
-add_subdirectory(Targets_publisher)
-
+add_subdirectory(Targets_publisher_subscriber)
+add_subdirectory(Obstacles_publisher_subscriber)

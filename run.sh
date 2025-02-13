@@ -86,9 +86,30 @@ fi
 gnome-terminal -- ./BlackBoardServer/BlackBoardServer &
 gnome-terminal -- ./DroneDynamicsManager/DroneDynamicsManager &
 gnome-terminal --geometry=110x40+0+0 -- bash -c "./GameWindow/GameWindow; exec bash" &
-gnome-terminal -- ./KeyboardManager/KeyboardManager &
+gnome-terminal -- ./KeyboardManager/KeyboardManager "$MODE" &
+
+if [ "$MODE" == "publisher" ]; then
+    gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
+
+fi
+
+if [ "$MODE" == "subscriber" ]; then
+    gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
+    gnome-terminal -- ./Obstacles_publisher_subscriber/Obstacles "$MODE" &
+fi
+
+
+
+
 gnome-terminal -- ./Targets_Generator/Targets_Generator "$MODE" &
-gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator &
+gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator "$MODE" &
+
+
+
+#if the mdoe is publiser run the publisher
+
+
+
 
 #sleep 2
 #gnome-terminal -- ./WatchDog/WatchDog &

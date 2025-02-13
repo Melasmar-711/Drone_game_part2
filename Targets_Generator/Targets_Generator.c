@@ -3,8 +3,7 @@
 #include "logger.h"
 
 int main(int argc, char *argv[]) {
-
-
+    printf("Starting TargetsGenerator...\n");
 
     if (argc >= 2) {
         fprintf(stderr, "Usage: %s <mode>\n", argv[1]);
@@ -12,97 +11,21 @@ int main(int argc, char *argv[]) {
     }
 
     char *mode = argv[1];
-   if (strcmp(mode, "publisher") != 0 && strcmp(mode, "subscriber") != 0) {
+    printf("Mode: %s\n", mode);
+
+    if (strcmp(mode, "publisher") != 0 && strcmp(mode, "subscriber") != 0) {
         fprintf(stderr, "Invalid mode. Use 'publisher' or 'subscriber'.\n");
-        while(1);//this will make it not log so the watchdog will know
-                //   something is wrong and kill it along with the rest of the processes
+        while(1); // this will make it not log so the watchdog will know something is wrong and kill it along with the rest of the processes
     }
 
-
-
-
-    
-    int fd_target_generator;
-    if (strcmp(mode, "publisher") == 0) {
-        // Create a named FIFO
-
-
-        // Fork and exec publisher node and pass the FIFO to it
-        pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-
-        if (pid == 0) {
-            // Child process
-            execlp("../build/Targets_publisher/Targets", "Targets", "publisher", NULL);
-            perror("execlp"); // If execlp fails
-            exit(EXIT_FAILURE);
-        } 
-        
-        else {
-
-            
-
-
-            const char *fifo_path = "/tmp/target_generator_fifo";
-            int fd_target_generator = create_and_open_fifo(fifo_path, 0, O_WRONLY);
-
-            
-            if (fd_target_generator == -1) {
-                perror("create_and_open_fifo");
-                exit(EXIT_FAILURE);
-            }
-
-        }
-
-    } 
-    
-    else if (strcmp(mode, "subscriber") == 0) {
-        // Create a named FIFO
-        const char *fifo_path = "/tmp/target_generator_fifo";
-        int fd_target_generator = create_and_open_fifo(fifo_path, 0, O_RDONLY);
-        if (fd_target_generator == -1) {
-            perror("create_and_open_fifo");
-            exit(EXIT_FAILURE);
-        }
-
-        // Fork and exec subscriber node and pass the FIFO to it
-        pid_t pid = fork();
-        if (pid == -1) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        }
-
-        if (pid == 0) {
-            // Child process
-            execlp("../build/Targets_publisher/Targets", "Targets", "subscriber", NULL);
-            perror("execlp"); // If execlp fails
-            exit(EXIT_FAILURE);
-        } 
-        
-        else {
-            // Parent process
-            printf("Opening FIFO for reading\n");
-            fd_target_generator = open(fifo_path, O_RDONLY);
-            if (fd_target_generator == -1) {
-                perror("open");
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-
-
-
-
-
+    int fd_target_generator; // to handle communication whether from the publisher or the subscriber
 
     char* log_file = "../Logs/TargetsGenerator.log";
     signal(SIGUSR2, handle_reset_signal);
     signal(SIGINT, handle_stop_signal);
 
     log_message(log_file, INFO, "TargetsGenerator started successfully.");
+    printf("Logging initialized.\n");
 
     int fifo_id = 0;
 
@@ -117,6 +40,27 @@ int main(int argc, char *argv[]) {
     int n_targets;
     get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);
 
+    printf("Configuration loaded: MAX_X=%d, MAX_Y=%d, FPS=%d, num_of_targets=%d\n", MAX_X, MAX_Y, fps_value, n_targets);
+
+    if (strcmp(mode, "publisher") == 0) {
+        const char *fifo_path = "/tmp/target_generator_fifo_pub_%d";
+        fd_target_generator = create_and_open_fifo(fifo_path, 0, O_WRONLY);
+        if (fd_target_generator == -1) {
+            perror("create_and_open_fifo");
+            exit(EXIT_FAILURE);
+        }
+        printf("Publisher FIFO created and opened.\n");
+    } 
+    
+    else if (strcmp(mode, "subscriber") == 0) {
+        const char *fifo_path = "/tmp/target_generator_fifo_sub_%d";
+        fd_target_generator = create_and_open_fifo(fifo_path, 0, O_RDONLY);
+        if (fd_target_generator == -1) {
+            perror("create_and_open_fifo");
+            exit(EXIT_FAILURE);
+        }
+        printf("Subscriber FIFO created and opened.\n");
+    }
 
 start:
     if (reset) {
@@ -128,60 +72,118 @@ start:
         get_int_from_json("../Game_Config.json", "FPS", &fps_value);
         get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);
 
-        usleep(10000);
+        printf("Reset configuration: MAX_X=%d, MAX_Y=%d, FPS=%d, num_of_targets=%d\n", MAX_X, MAX_Y, fps_value, n_targets);
+
+        usleep(100000);
     }
 
     // Seed random number generator
     srand(time(NULL) + 1);
 
-    // Create FIFO
-    int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d", fifo_id, O_WRONLY);
+    if (strcmp(mode, "publisher") == 0) {
+        while (1) {
+            int num_targets = n_targets;
+            int targets[n_targets][2];
+
+            for (int i = 0; i < num_targets; i++) {
+                targets[i][0] = (rand() % ((MAX_X - 2) / 2)) * 2 + 2;  // X coordinate (even)
+                targets[i][1] = (rand() % ((MAX_Y - 2) / 2)) * 2 + 2;  // Y coordinate (even)
+            }
+
+            Targets_gen targets_to_publish = {0};
+            targets_to_publish.num_targets = num_targets;
+            for (int i = 0; i < num_targets; i++) {
+                targets_to_publish.targets[i][0] = targets[i][0];
+                targets_to_publish.targets[i][1] = targets[i][1];
+            }
+
+            ssize_t bytes_written = write(fd_target_generator, &targets_to_publish, sizeof(targets_to_publish));
+            log_message(log_file, INFO, "TargetsGenerator publishing targets.");
+            printf("Generated and sent %d targets.\n", num_targets);
+
+            usleep(1000000);
+
+            if (reset) {
+                goto start;
+            }
+
+            if (stop) {
+                close(fd_target_generator);
+                log_message(log_file, INFO, "TargetsGenerator shutting down.");
+                break;
+            }
+        }
+    } else if (strcmp(mode, "subscriber") == 0) {
+        int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d", fifo_id, O_WRONLY);
+        Targets_gen targets_from_subscriber = {0};
+
+        fd_set read_fds;
+        struct timeval timeout;
+
+        FD_ZERO(&read_fds);
+        FD_SET(fd_target_generator, &read_fds);
+
+        timeout.tv_sec = 0;  // Set timeout to 5 seconds
+        timeout.tv_usec = 0;
+
+        while (1) {
+            if (reset) {
+            printf("Reset signal received. Closing FIFO and restarting...\n");
+            close(fd_target_generator_to_server);
+            goto start;
+            }
+
+            if (stop) {
+            printf("Stop signal received. Shutting down...\n");
+            usleep(1000000);
+            close(fd_target_generator_to_server);
+            log_message(log_file, INFO, "TargetsGenerator shutting down.");
+            exit(0);
+            }
+
+            printf("Waiting for data on FIFO...\n");
+            int ret = select(fd_target_generator + 1, &read_fds, NULL, NULL, &timeout);
+
+            if (ret == -1) {
+            perror("select");
+            continue;
+            }
+
+            if (FD_ISSET(fd_target_generator, &read_fds)) {
+            ssize_t bytes_read = read(fd_target_generator, &targets_from_subscriber, sizeof(targets_from_subscriber));
 
 
+            printf("Read %zd bytes from FIFO.\n", bytes_read);
+            if (bytes_read == -1) {
+                
+                perror("read");
+                continue;
+            }
 
-    //if in the publisher mode then the numebr of targets will be  the same as the json file
-    if (strcmp(mode, "publisher") == 0){
+            //for loop to print what we read in pairs 
+            for (int i = 0; i < targets_from_subscriber.num_targets; i++) {
+                printf("(%d, %d) ", targets_from_subscriber.targets[i][0], targets_from_subscriber.targets[i][1]);
+            }
 
-        int num_targets = n_targets;
-        int targets[n_targets][2];
+            break;
+            } else {
+            printf("No data available on FIFO. Retrying...\n");
+            continue;
+            }
+        }
 
+        int num_targets = targets_from_subscriber.num_targets; // the number of targets that the subscriber node is going to mention in the msg
+        printf("Received %d targets.\n", num_targets);
+
+        int targets[MAX_TARGETS][2];
 
         for (int i = 0; i < num_targets; i++) {
-
-            // Generate random targets within specified boundaries, ensuring even positions
-
-            targets[i][0] = (rand() % ((MAX_X - 2) / 2)) * 2 + 2;  // X coordinate (even)
-            targets[i][1] = (rand() % ((MAX_Y - 2) / 2)) * 2 + 2;  // Y coordinate (even)
-
+            targets[i][0] = targets_from_subscriber.targets[i][0];
+            targets[i][1] = targets_from_subscriber.targets[i][1];
         }
 
 
 
-        //send the targets to the publisehr node through the unnamed pipe
-        Targets_gen targets_to_publish;
-        targets_to_publish.num_targets = num_targets;
-        memcpy(targets_to_publish.targets, targets, sizeof(targets));
-
-        ssize_t bytes_written = write(fd_target_generator, &targets_to_publish, sizeof(targets_to_publish));
-    }
-
-    else if (strcmp(mode, "subscriber") == 0){
-
-        //receive from the subscriber node the from the unnamed pipe the stuct that has the targets and the number of targets
-
-        Targets_gen targets_from_subscriber;
-        ssize_t bytes_read = read(fd_target_generator, &targets_from_subscriber, sizeof(targets_from_subscriber));  
-        
-        int num_targets = targets_from_subscriber.num_targets;// the number of targets that the subscriber node is going to mention in the msg
-
-
-        //write to the json file
-        write_int_to_json("../Game_Config.json", "num_of_targets", num_targets);
-
-
-        int targets[num_targets][2];
-
-        // Send the targets array to the server
         ssize_t bytes_written = write(fd_target_generator_to_server, targets, sizeof(targets));
         if (bytes_written == -1) {
             perror("Error writing to FIFO");
@@ -189,16 +191,11 @@ start:
             return 1;
         }
 
-        printf("Generated and sent %d targets.\n", num_targets);
+        log_message(log_file, INFO, "TargetsGenerator sending targets.");
 
-
-    }
-
-
-
-    while (!reset & !stop) {
+        while (!reset && !stop) {
             log_message(log_file, INFO, "TargetsGenerator running.");
-            usleep(1000000 / fps_value);
+            usleep(10000);
         }
 
         if (reset) {
@@ -206,8 +203,15 @@ start:
             goto start;
         }
 
+        if (stop) {
+            usleep(1000000);
+            close(fd_target_generator_to_server);
+            log_message(log_file, INFO, "TargetsGenerator shutting down.");
+            exit(0);
+        }
+
         log_message(log_file, INFO, "TargetsGenerator shutting down.");
         close(fd_target_generator_to_server);
         return 0;
-
+    }
 }

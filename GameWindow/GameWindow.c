@@ -44,7 +44,7 @@ start:
         fifo_id++;
         reset=false;
         log_message(log_file, INFO, "GameWindow reset.");
-        usleep(10000);
+        usleep(100000);
         
         get_int_from_json("../Game_Config.json","MAX_X",&MAX_X);
         get_int_from_json("../Game_Config.json","MAX_Y",&MAX_Y);
@@ -117,6 +117,13 @@ start:
             close(fd_server_to_GameWindow);
 
             goto start;
+        }
+
+        if(stop){
+            usleep(1000000);
+            close(fd_server_to_GameWindow);
+            log_message(log_file, INFO, "GameWindow shutting down.");
+            exit(0);
         }
 
 

@@ -38,7 +38,7 @@ start:
         log_message(log_file, INFO, "DroneDynamicsManager reset.");
         fifo_id++;
         reset=false;
-        usleep(10000);
+        usleep(100000);
     }
 
 
@@ -89,7 +89,7 @@ start:
 
 
     
-    while (!stop) {
+    while (true) {
 
 
 
@@ -183,6 +183,15 @@ start:
             close(fd_server_to_Dynamics);
             goto start;
             
+        }
+
+
+        if(stop){
+            usleep(1000000);
+            close(fd_Dynamics_to_server);
+            close(fd_server_to_Dynamics);
+            log_message(log_file, INFO, "DroneDynamicsManager shutting down.");
+            break;
         }
 
         usleep(1000000 / fps_value);

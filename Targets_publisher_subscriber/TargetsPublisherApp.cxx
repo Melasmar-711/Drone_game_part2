@@ -33,18 +33,23 @@
 #include <fastdds/dds/publisher/qos/DataWriterQos.hpp>
 #include <fastdds/dds/publisher/qos/PublisherQos.hpp>
 
-#include "TargetsPubSubTypes.hpp"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
+#include "TargetsPubSubTypes.hpp"
+#include <fastdds/rtps/transport/TCPv4TransportDescriptor.hpp>
+
+
+
+
 
 using namespace eprosima::fastdds::dds;
 
+using namespace eprosima::fastdds::rtps;
 TargetsPublisherApp::TargetsPublisherApp(
         const int& domain_id)
     : factory_(nullptr)
@@ -59,9 +64,35 @@ TargetsPublisherApp::TargetsPublisherApp(
 {
     //
 
-    // Create the participant
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
+
+    
+    pqos.transport().use_builtin_transports = false;
+
+    // ✅ Use TCPv4TransportDescriptor instead of TCPTransportDescriptor
+    std::shared_ptr<TCPv4TransportDescriptor> tcp_transport =std::make_shared<TCPv4TransportDescriptor>();
+
+    // ✅ Configure the TCP transport
+    tcp_transport->sendBufferSize = 131072;
+    tcp_transport->receiveBufferSize = 131072;
+    tcp_transport->add_listener_port(5100);
+
+    // ✅ Add TCP transport to QoS
+    pqos.transport().user_transports.push_back(tcp_transport);
+
+
+   // Set initial peers for discovery
+    Locator_t initial_peer;
+    initial_peer.kind = LOCATOR_KIND_TCPv4; // Use TCPv4
+    IPLocator::setIPv4(initial_peer, "127.0.0.1"); // Set IP address
+    initial_peer.port = 5101; // Subscriber's port
+    pqos.wire_protocol().builtin.initialPeersList.push_back(initial_peer);
+
+
+
+
     pqos.name("Targets_pub_participant");
+
     factory_ = DomainParticipantFactory::get_shared_instance();
     participant_ = factory_->create_participant(domain_id, pqos, nullptr, StatusMask::none());
     if (participant_ == nullptr)
@@ -146,38 +177,44 @@ void TargetsPublisherApp::on_publication_matched(
 void TargetsPublisherApp::run()
 {
 
-    char fifo_name[256]="/tmp/target_generator_fifo";
-    //create and open the fifo to read the targets from the generator
-    if (mkfifo(fifo_name, 0666) < 0 && errno != EEXIST) {
-        perror("Failed to create FIFO");
-        exit(1);
+
+    const char *fifo_path = "/tmp/target_generator_fifo_pub_0";
+
+    struct stat st;
+    if (stat(fifo_path, &st) != 0) {
+        if (mkfifo(fifo_path, 0666) < 0) {
+            perror("Failed to create FIFO");
+            exit(1);
+        }
     }
 
-    int fd = open(fifo_name, O_RDONLY);
+    int fd = open(fifo_path, O_RDONLY);
     if (fd < 0) {
         perror("Failed to open FIFO");
         exit(1);
     }
 
-    std::cout<<"Targets Publisher running"<<std::endl;
+    //print opened the (fifo name)
+    std::cout << "Opened the FIFO: " << fifo_path << std::endl;
     
-
-    Targets_gen targets;
-
-    
-
-    while (read(fd, &targets, sizeof(targets)) > 0)
+    while (!is_stopped())
     {
 
+        Targets_gen targets_from_publisher={0};
+
+        ssize_t bytes_read = read(fd, &targets_from_publisher, sizeof(targets_from_publisher));
 
 
-        if (publish(targets))
+        if(bytes_read!=0){
+        if (publish(&targets_from_publisher))
         {
             std::cout << "Sample '" << std::to_string(++samples_sent_) << "' SENT" << std::endl;
         }
+
+        }
         // Wait for period or stop event
         std::unique_lock<std::mutex> period_lock(mutex_);
-        cv_.wait_for(period_lock, std::chrono::milliseconds(period_ms_), [this]()
+        cv_.wait_for(period_lock, std::chrono::milliseconds(10000), [this]()
                 {
                     return is_stopped();
                 });
@@ -185,22 +222,45 @@ void TargetsPublisherApp::run()
 }
 
 
-bool TargetsPublisherApp::publish(Targets_gen targets)
+bool TargetsPublisherApp::publish(Targets_gen *targets_from_publisher)
 {
+    bool ret = false;
+    // Wait for the data endpoints discovery
+    std::unique_lock<std::mutex> matched_lock(mutex_);
+    cv_.wait(matched_lock, [&]()
+            {
+                // at least one has been discovered
+                return ((matched_ > 0) || is_stopped());
+            });
 
-    //do a for loop that extracts the targets_x and targets_y into two vectors called targets_x and targets_y
-    //then call the targets_x and targets_y functions to set the values of the targets_x and targets_y
-    //then call the targets_number function to set the value of the targets_number
-    //then call the writer_->write function to write the sample to the writer
-    std::vector<int32_t> targets_x;
-    std::vector<int32_t> targets_y;
 
-    for (int i = 0; i < targets.num_targets; ++i)
+    //make a vector to extract x values from the targets_from_publisher
+    std::vector<int32_t> x_values;
+    for (int i = 0; i < targets_from_publisher->num_targets; i++) {
+        x_values.push_back(targets_from_publisher->targets[i][0]);
+    }
+    //make a vector to extract y values from the targets_from_publisher
+    std::vector<int32_t> y_values;
+    for (int i = 0; i < targets_from_publisher->num_targets; i++) {
+        y_values.push_back(targets_from_publisher->targets[i][1]);
+    }        
+
+    if (!is_stopped())
     {
-        targets_x.push_back(targets.targets[i][0]);
-        targets_y.push_back(targets.targets[i][1]);
+        /* Initialize your structure here */
+        Targets sample_;
+        sample_.targets_number(targets_from_publisher->num_targets);
+        sample_.targets_x(x_values);
+        sample_.targets_y(y_values);
+        ret = (RETCODE_OK == writer_->write(&sample_));
     }
 
+    
+    return ret;
+}
+
+
+/*{
 
 
 
@@ -214,20 +274,33 @@ bool TargetsPublisherApp::publish(Targets_gen targets)
                 return ((matched_ > 0) || is_stopped());
             });
 
+
+
+    // make a for loop that fils two random vectors of int32
+            std::vector<int32_t> vector1(10);
+            std::vector<int32_t> vector2(10);
+            std::generate(vector1.begin(), vector1.end(), []() { return rand() % 100; });
+            std::generate(vector2.begin(), vector2.end(), []() { return rand() % 100; });
+
+            // Assuming Targets has members vector1 and vector2
+
+
     if (!is_stopped())
     {
-        /* Initialize your structure here */
+        /* Initialize your structure here 
         Targets sample_;
-
-        sample_.targets_number(targets.num_targets);
-
-        sample_.targets_x(targets_x);
-        sample_.targets_y(targets_y);
-
+        sample_.targets_x(vector1);
+        sample_.targets_y(vector2);
+        sample_.targets_number(rand() % 100);
         ret = (RETCODE_OK == writer_->write(&sample_));
     }
     return ret;
 }
+*/
+
+
+
+
 
 bool TargetsPublisherApp::is_stopped()
 {

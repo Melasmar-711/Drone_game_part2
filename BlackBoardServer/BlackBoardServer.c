@@ -33,7 +33,7 @@ start:
         fifo_id++;
         reset=false;
         
-        usleep(10000);
+        usleep(300000);
 
     }
 
@@ -175,7 +175,7 @@ start:
 
         // Handle input from Target Generator
         if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
-            int new_targets[n_targets][2];
+            int new_targets[MAX_TARGETS][2];
             ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
             if (bytes_read == sizeof(new_targets)) {
                 // Copy data into state struct
@@ -190,7 +190,7 @@ start:
         
         // Handle input from Obstacle Generator
         if (FD_ISSET(fd_obstacle_generator_to_server, &read_fds)) {
-            int new_obstacles[n_obstacles][2];
+            int new_obstacles[MAX_OBSTACLES][2];
             ssize_t bytes_read = read(fd_obstacle_generator_to_server, new_obstacles, sizeof(new_obstacles));
             if (bytes_read == sizeof(new_obstacles)) {
                 // Copy data into state struct
@@ -205,7 +205,7 @@ start:
             } else {
                 fprintf(stderr, "Failed to read the correct number of bytes from obstacle generator.\n");
             }
-}
+        }
 
 
         // Send updated state to GameWindow
@@ -262,6 +262,25 @@ start:
         close(fd_obstacle_generator_to_server);
 
         goto start;
+
+    }
+
+
+
+    if(stop){
+
+        usleep(1000000);
+
+        close(fd_Dynamics_to_server);
+        close(fd_server_to_Dynamics);
+        close(fd_server_to_GameWindow);
+        close(fd_Keyboard_to_server);
+        close(fd_target_generator_to_server);
+        close(fd_obstacle_generator_to_server);
+
+        log_message(log_file, INFO, "BlackBoardServer shutting down.");
+        exit(0);
+
 
     }
 
