@@ -86,18 +86,30 @@ start:
 
 
 
+    //for loop to intialize the targets randomly
+    int new_targets[MAX_TARGETS][2];
+    for(int i=0;i<n_targets;i++){
+        new_targets[i][0] = (rand() % ((100 - 2) / 2)) * 2 + 2;  // X coordinate (even)
+        new_targets[i][1] = (rand() % ((30 - 2) / 2)) * 2 + 2;  // Y coordinate (even)
+        state.targets[i][0]=new_targets[i][0];
+        state.targets[i][1]=new_targets[i][1];
+    }
+
+
+
 
     while (1) {
 
 
 
-    // Retrieve the number of obstacles and targets from the JSON configuration file
-    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
-    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);
+
 
     state.num_obstacles = n_obstacles;
     state.num_targets = n_targets;
     
+    
+
+
 
 
 
@@ -176,16 +188,16 @@ start:
         // Handle input from Target Generator
         if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
             int new_targets[MAX_TARGETS][2];
-            ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
-            if (bytes_read == sizeof(new_targets)) {
+            //ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
+            //if (bytes_read == sizeof(new_targets)) {
                 // Copy data into state struct
-                memcpy(state.targets, new_targets, sizeof(new_targets));
-                state.num_targets = n_targets;
+               // memcpy(state.targets, new_targets, sizeof(new_targets));
+               // state.num_targets = n_targets;
 
             for (int i = 0; i < n_targets; i++) {
                 printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
             }
-            }
+            //}
         }
         
         // Handle input from Obstacle Generator
@@ -223,7 +235,7 @@ start:
             if (prev_input.force_x!= input.force_x || prev_input.force_y!= input.force_y || new_obstacle_arrived)
             {
 
-            printf("i am sending to the dynamics now %d %d \n",state.input_x_force,state.input_y_force);
+            //printf("i am sending to the dynamics now %d %d \n",state.input_x_force,state.input_y_force);
 
             if(!reset){
                 
@@ -243,7 +255,7 @@ start:
                 if (bytes_read == sizeof(ServerState)) {
                     // Enforce geofence boundaries
 
-                    printf("Updated state received from DroneDynamics %f\n ",state.drone_x);
+                    //printf("Updated state received from DroneDynamics %f\n ",state.drone_x);
                 }
 
 

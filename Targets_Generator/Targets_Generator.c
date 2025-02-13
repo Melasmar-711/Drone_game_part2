@@ -144,29 +144,18 @@ start:
             printf("Waiting for data on FIFO...\n");
             int ret = select(fd_target_generator + 1, &read_fds, NULL, NULL, &timeout);
 
-            if (ret == -1) {
-            perror("select");
-            continue;
-            }
 
+            
             if (FD_ISSET(fd_target_generator, &read_fds)) {
             ssize_t bytes_read = read(fd_target_generator, &targets_from_subscriber, sizeof(targets_from_subscriber));
 
 
             printf("Read %zd bytes from FIFO.\n", bytes_read);
-            if (bytes_read == -1) {
-                
-                perror("read");
-                continue;
-            }
-
-            //for loop to print what we read in pairs 
-            for (int i = 0; i < targets_from_subscriber.num_targets; i++) {
-                printf("(%d, %d) ", targets_from_subscriber.targets[i][0], targets_from_subscriber.targets[i][1]);
-            }
 
             break;
-            } else {
+            } 
+            
+            else {
             printf("No data available on FIFO. Retrying...\n");
             continue;
             }
@@ -175,11 +164,13 @@ start:
         int num_targets = targets_from_subscriber.num_targets; // the number of targets that the subscriber node is going to mention in the msg
         printf("Received %d targets.\n", num_targets);
 
-        int targets[MAX_TARGETS][2];
+        int targets[MAX_TARGETS][2] = {0};
 
-        for (int i = 0; i < num_targets; i++) {
+        for (int i = 0; i < n_targets; i++) {
             targets[i][0] = targets_from_subscriber.targets[i][0];
             targets[i][1] = targets_from_subscriber.targets[i][1];
+
+             printf("(%d, %d) ", targets[i][0], targets[i][1]);
         }
 
 
@@ -189,8 +180,9 @@ start:
             perror("Error writing to FIFO");
             close(fd_target_generator_to_server);
             return 1;
+        } else {
+            printf("Successfully wrote %zd bytes to server FIFO.\n", bytes_written);
         }
-
         log_message(log_file, INFO, "TargetsGenerator sending targets.");
 
         while (!reset && !stop) {

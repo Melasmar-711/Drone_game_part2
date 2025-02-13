@@ -90,7 +90,7 @@ gnome-terminal -- ./KeyboardManager/KeyboardManager "$MODE" &
 
 if [ "$MODE" == "publisher" ]; then
     gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
-
+    gnome-terminal -- ./Obstacles_publisher_subscriber/Obstacles "$MODE" &
 fi
 
 if [ "$MODE" == "subscriber" ]; then

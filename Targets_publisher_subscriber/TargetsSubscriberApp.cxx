@@ -183,6 +183,8 @@ void TargetsSubscriberApp::on_data_available(
         }
 
 
+        
+
         write(fd, &targets_from_publisher, sizeof(Targets_gen));
 
 
