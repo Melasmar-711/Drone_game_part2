@@ -45,8 +45,8 @@ start:
     int fd_Dynamics_to_server = create_and_open_fifo("/tmp/DroneDynamics_to_server_%d",fifo_id, O_RDONLY|O_NONBLOCK);
 
     int fd_server_to_GameWindow = create_and_open_fifo("/tmp/server_to_GameWindow_%d",fifo_id, O_WRONLY);
-    int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d",fifo_id, O_RDONLY | O_NONBLOCK);
-    int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_RDONLY | O_NONBLOCK);
+    int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d",fifo_id, O_RDONLY );
+    int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_RDONLY );
 
 
 
@@ -152,7 +152,45 @@ start:
 
         if (activity > 0) {
         
-            // Handle input from KeyboardManager
+
+
+        // Handle input from Target Generator
+        if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
+            int new_targets[MAX_TARGETS][2];
+            ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
+            if (bytes_read == sizeof(new_targets)) {
+                // Copy data into state struct
+                memcpy(state.targets, new_targets, sizeof(new_targets));
+                state.num_targets = n_targets;
+
+            for (int i = 0; i < n_targets; i++) {
+                printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
+            }
+            }
+        }
+        
+
+        // Handle input from Obstacle Generator
+        if (FD_ISSET(fd_obstacle_generator_to_server, &read_fds)) {
+            int new_obstacles[MAX_OBSTACLES][2];
+            ssize_t bytes_read = read(fd_obstacle_generator_to_server, new_obstacles, sizeof(new_obstacles));
+            if (bytes_read == sizeof(new_obstacles)) {
+                // Copy data into state struct
+                memcpy(state.obstacles, new_obstacles, sizeof(new_obstacles));
+                state.num_obstacles = n_obstacles;
+                new_obstacle_arrived = true;
+                // Print received obstacles
+                printf("Received %d obstacles:\n", state.num_obstacles);
+                for (int i = 0; i < n_obstacles; i++) {
+                    printf("Obstacle %d: (%d, %d)\n", i, state.obstacles[i][0], state.obstacles[i][1]);
+                }
+            } else {
+                fprintf(stderr, "Failed to read the correct number of bytes from obstacle generator.\n");
+            }
+        }
+
+
+                    // Handle input from KeyboardManager
             if (FD_ISSET(fd_Keyboard_to_server, &read_fds)) {
                 
                 ssize_t bytes_read = read(fd_Keyboard_to_server, &input, sizeof(KeyboardInput));
@@ -172,40 +210,6 @@ start:
                     
                 }
             }
-
-        // Handle input from Target Generator
-        if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
-            int new_targets[MAX_TARGETS][2];
-            ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
-            if (bytes_read == sizeof(new_targets)) {
-                // Copy data into state struct
-                memcpy(state.targets, new_targets, sizeof(new_targets));
-                state.num_targets = n_targets;
-
-            for (int i = 0; i < n_targets; i++) {
-                printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
-            }
-            }
-        }
-        
-        // Handle input from Obstacle Generator
-        if (FD_ISSET(fd_obstacle_generator_to_server, &read_fds)) {
-            int new_obstacles[MAX_OBSTACLES][2];
-            ssize_t bytes_read = read(fd_obstacle_generator_to_server, new_obstacles, sizeof(new_obstacles));
-            if (bytes_read == sizeof(new_obstacles)) {
-                // Copy data into state struct
-                memcpy(state.obstacles, new_obstacles, sizeof(new_obstacles));
-                state.num_obstacles = n_obstacles;
-                new_obstacle_arrived = true;
-                // Print received obstacles
-                printf("Received %d obstacles:\n", state.num_obstacles);
-                for (int i = 0; i < n_obstacles; i++) {
-                    printf("Obstacle %d: (%d, %d)\n", i, state.obstacles[i][0], state.obstacles[i][1]);
-                }
-            } else {
-                fprintf(stderr, "Failed to read the correct number of bytes from obstacle generator.\n");
-            }
-        }
 
 
         // Send updated state to GameWindow
