@@ -111,5 +111,5 @@ gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator "$MODE" &
 
 
 
-#sleep 2
-#gnome-terminal -- ./WatchDog/WatchDog &
+sleep 2
+gnome-terminal -- ./WatchDog/WatchDog &

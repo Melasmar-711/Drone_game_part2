@@ -20,7 +20,7 @@ typedef struct {
 
 MonitoredProcess processes[MAX_PROCESSES];
 int process_count = 0;
-int timeout =1; // Default timeout in seconds
+int timeout =4; // Default timeout in seconds
 
 // Function to check file modification time
 time_t get_file_mod_time(const char *file_path) {
