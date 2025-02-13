@@ -23,7 +23,8 @@ int main() {
     int fifo_id=0;
     int fd_Keyboard_to_server = create_and_open_fifo("/tmp/keyboardManager_to_server_%d",0, O_RDONLY|O_NONBLOCK);
 
-    
+    bool just_once=true;
+
 start:
 
     if (reset){
@@ -83,7 +84,6 @@ start:
 
     KeyboardInput prev_input={0};
     KeyboardInput input={0};
-
 
 
 
@@ -167,6 +167,19 @@ start:
                 printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
             }
             }
+        }
+        else{
+            if (fifo_id==0 && just_once==true)
+            {
+                //generate some random targets and put them in the state struct using a for loop
+                for (int i = 0; i < n_targets; i++) {
+                    state.targets[i][0] = rand() % 70;
+                    state.targets[i][1] = rand() % 27;
+                    just_once=false;
+                }
+                
+            }
+
         }
         
 
