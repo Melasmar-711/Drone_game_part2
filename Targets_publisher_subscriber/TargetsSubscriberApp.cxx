@@ -23,6 +23,9 @@
 
 #include <condition_variable>
 #include <stdexcept>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <fastdds/dds/core/status/SubscriptionMatchedStatus.hpp>
 #include <fastdds/dds/domain/DomainParticipantFactory.hpp>
@@ -31,12 +34,10 @@
 #include <fastdds/dds/subscriber/qos/SubscriberQos.hpp>
 #include <fastdds/dds/subscriber/SampleInfo.hpp>
 #include <fastdds/dds/subscriber/Subscriber.hpp>
-#include <fastdds/rtps/transport/TCPv4TransportDescriptor.hpp>  // Include TCP Transport Header
-#include "TargetsPubSubTypes.hpp"
 #include "Generator_functions.h"
+#include "TargetsPubSubTypes.hpp"
 
 using namespace eprosima::fastdds::dds;
-using namespace eprosima::fastdds::rtps;
 
 TargetsSubscriberApp::TargetsSubscriberApp(const int& domain_id)
     : factory_(nullptr)
@@ -48,59 +49,38 @@ TargetsSubscriberApp::TargetsSubscriberApp(const int& domain_id)
     , samples_received_(0)
     , stop_(false)
 {
-    // Configure DomainParticipantQos
-    DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
-    pqos.transport().use_builtin_transports = false;
-
-     // Configure TCP transport
-     std::shared_ptr<TCPv4TransportDescriptor> tcp_transport = std::make_shared<TCPv4TransportDescriptor>();
-     tcp_transport->sendBufferSize = 131072;
-     tcp_transport->receiveBufferSize = 131072;
-     tcp_transport->maxMessageSize = 64536;  // 64 KB
-     tcp_transport->add_listener_port(5101); // Add listener port
-     pqos.transport().user_transports.push_back(tcp_transport);
-     // Set initial peers for discovery
-     Locator_t initial_peer;
-     initial_peer.kind = LOCATOR_KIND_TCPv4; // Use TCPv4
-     IPLocator::setIPv4(initial_peer, "127.0.0.1"); // Set IP address
-     initial_peer.port = 5100; // Publisher's port
-     pqos.wire_protocol().builtin.initialPeersList.push_back(initial_peer);
-
-    /************************************************************* */
-
     // Create the participant
-    //DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
+    DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
     pqos.name("Targets_sub_participant");
-
-
-
-/******************************************************************************* */
-    // Create DomainParticipant
     factory_ = DomainParticipantFactory::get_shared_instance();
-    participant_ = factory_->create_participant(0, pqos, nullptr, StatusMask::none());
+    participant_ = factory_->create_participant(1, pqos, nullptr, StatusMask::none());
     if (participant_ == nullptr)
     {
         throw std::runtime_error("Targets Participant initialization failed");
     }
 
-    // Register the Targets type
+    // Register the type
     type_.register_type(participant_);
 
-    // Create the Topic
-    topic_ = participant_->create_topic("TargetsTopic", type_.get_type_name(), TOPIC_QOS_DEFAULT);
-    if (topic_ == nullptr)
-    {
-        throw std::runtime_error("Targets Topic initialization failed");
-    }
-
-    // Create the Subscriber
-    subscriber_ = participant_->create_subscriber(SUBSCRIBER_QOS_DEFAULT, nullptr, StatusMask::none());
+    // Create the subscriber
+    SubscriberQos sub_qos = SUBSCRIBER_QOS_DEFAULT;
+    participant_->get_default_subscriber_qos(sub_qos);
+    subscriber_ = participant_->create_subscriber(sub_qos, nullptr, StatusMask::none());
     if (subscriber_ == nullptr)
     {
         throw std::runtime_error("Targets Subscriber initialization failed");
     }
 
-    // Create the DataReader
+    // Create the topic
+    TopicQos topic_qos = TOPIC_QOS_DEFAULT;
+    participant_->get_default_topic_qos(topic_qos);
+    topic_ = participant_->create_topic("TargetsTopic", type_.get_type_name(), topic_qos);
+    if (topic_ == nullptr)
+    {
+        throw std::runtime_error("Targets Topic initialization failed");
+    }
+
+    // Create the reader
     DataReaderQos reader_qos = DATAREADER_QOS_DEFAULT;
     subscriber_->get_default_datareader_qos(reader_qos);
     reader_qos.reliability().kind = ReliabilityQosPolicyKind::RELIABLE_RELIABILITY_QOS;
@@ -117,96 +97,75 @@ TargetsSubscriberApp::~TargetsSubscriberApp()
 {
     if (nullptr != participant_)
     {
-        // Delete DDS entities contained within the DomainParticipant
         participant_->delete_contained_entities();
-
-        // Delete DomainParticipant
         factory_->delete_participant(participant_);
     }
 }
 
-void TargetsSubscriberApp::on_subscription_matched(
-        DataReader* /*reader*/,
-        const SubscriptionMatchedStatus& info)
+void TargetsSubscriberApp::on_subscription_matched(DataReader* /*reader*/, const SubscriptionMatchedStatus& info)
 {
     if (info.current_count_change == 1)
     {
+//print not log
         std::cout << "Targets Subscriber matched." << std::endl;
     }
     else if (info.current_count_change == -1)
     {
+//print not log
         std::cout << "Targets Subscriber unmatched." << std::endl;
-    }
-    else
-    {
-        std::cout << info.current_count_change
-                  << " is not a valid value for SubscriptionMatchedStatus current count change" << std::endl;
     }
 }
 
-void TargetsSubscriberApp::on_data_available(
-        DataReader* reader)
+void TargetsSubscriberApp::on_data_available(DataReader* reader)
 {
     Targets sample_;
     SampleInfo info;
-
-
-    const char *fifo_path = "/tmp/target_generator_fifo_sub_0";
-
+    const char* fifo_path = "/tmp/target_generator_fifo_sub_0";
+    
     struct stat st;
-    if (stat(fifo_path, &st) != 0) {
-        if (mkfifo(fifo_path, 0666) < 0) {
+    if (stat(fifo_path, &st) != 0)
+    {
+        if (mkfifo(fifo_path, 0666) < 0)
+        {
             perror("Failed to create FIFO");
             exit(1);
         }
     }
-
+    
     int fd = open(fifo_path, O_WRONLY);
-    if (fd < 0) {
+    if (fd < 0)
+    {
         perror("Failed to open FIFO");
         exit(1);
     }
 
-    Targets_gen targets_from_publisher={0};
+
+    Targets_gen targets_from_publisher = {0};
     
     while ((!is_stopped()) && (RETCODE_OK == reader->take_next_sample(&sample_, &info)))
     {
-
-        std::cout<<sample_.targets_number()<<std::endl;
-                // print sample data as tuples of each x,y pair
         targets_from_publisher.num_targets = sample_.targets_number();
         for (int i = 0; i < sample_.targets_number(); i++)
         {
             targets_from_publisher.targets[i][0] = sample_.targets_x()[i];
             targets_from_publisher.targets[i][1] = sample_.targets_y()[i];
-            std::cout << "(" << sample_.targets_x()[i] << ", " << sample_.targets_y()[i] << ") ";
         }
-
-
         write(fd, &targets_from_publisher, sizeof(Targets_gen));
 
-
-        
         if ((info.instance_state == ALIVE_INSTANCE_STATE) && info.valid_data)
         {
             std::cout << "Sample '" << std::to_string(++samples_received_) << "' RECEIVED" << std::endl;
-
         }
     }
 }
 
 void TargetsSubscriberApp::run()
 {
-
-
-
-
-
     std::unique_lock<std::mutex> lck(terminate_cv_mtx_);
     terminate_cv_.wait(lck, [this]
-            {
-                return is_stopped();
-            });
+    {
+        return is_stopped();
+    });
 }
 
 bool TargetsSubscriberApp::is_stopped()

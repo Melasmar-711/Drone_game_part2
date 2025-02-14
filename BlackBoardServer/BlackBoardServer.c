@@ -1,5 +1,3 @@
-
-
 #include "server_functions.h"
 #include"sig_handle.h"
 #include"logger.h"
@@ -24,6 +22,7 @@ int main() {
     int fd_Keyboard_to_server = create_and_open_fifo("/tmp/keyboardManager_to_server_%d",0, O_RDONLY|O_NONBLOCK);
 
     bool just_once=true;
+    reset=false;
 
 start:
 
@@ -47,7 +46,7 @@ start:
 
     int fd_server_to_GameWindow = create_and_open_fifo("/tmp/server_to_GameWindow_%d",fifo_id, O_WRONLY);
     int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d",fifo_id, O_RDONLY );
-    int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_RDONLY );
+    int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_RDONLY|O_NONBLOCK );
 
 
 
@@ -80,31 +79,32 @@ start:
     get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets); 
 
 
+
+    int fps_value;
+
+    // Retrieve the FPS value
+    get_int_from_json("../Game_Config.json", "FPS", &fps_value);
+
+
     ServerState state = initialize_server_state( n_obstacles,n_targets);   
 
     KeyboardInput prev_input={0};
     KeyboardInput input={0};
 
 
-
     while (1) {
 
+        //print the process pid
+        //printf("BlackBoardServer pid: %d\n", pid);
 
 
-    // Retrieve the number of obstacles and targets from the JSON configuration file
-    get_int_from_json("../Game_Config.json", "num_of_obstacles", &n_obstacles);
-    get_int_from_json("../Game_Config.json", "num_of_targets", &n_targets);
+
 
     state.num_obstacles = n_obstacles;
     state.num_targets = n_targets;
     
 
 
-
-    int fps_value;
-
-    // Retrieve the FPS value
-    get_int_from_json("../Game_Config.json", "FPS", &fps_value);
 
 
         bool new_obstacle_arrived = false;
@@ -154,11 +154,14 @@ start:
         
 
 
+
+
+
         // Handle input from Target Generator
         if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
             int new_targets[MAX_TARGETS][2];
             ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
-            if (bytes_read == sizeof(new_targets)) {
+            
                 // Copy data into state struct
                 memcpy(state.targets, new_targets, sizeof(new_targets));
                 state.num_targets = n_targets;
@@ -166,21 +169,48 @@ start:
             for (int i = 0; i < n_targets; i++) {
                 printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
             }
-            }
+            
         }
         else{
-            if (fifo_id==0 && just_once==true)
+            if (just_once==true&&fifo_id==0 )
             {
+                printf("I am generating the targets now\n");
+
                 //generate some random targets and put them in the state struct using a for loop
                 for (int i = 0; i < n_targets; i++) {
                     state.targets[i][0] = rand() % 70;
                     state.targets[i][1] = rand() % 27;
-                    just_once=false;
+                    printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
+
                 }
+                just_once=false;
+
+
                 
             }
 
         }
+
+                    // Handle input from KeyboardManager
+            if (FD_ISSET(fd_Keyboard_to_server, &read_fds)) {
+                
+                ssize_t bytes_read = read(fd_Keyboard_to_server, &input, sizeof(KeyboardInput));
+                
+                if (bytes_read == sizeof(KeyboardInput)) {
+                    if (input.quit) {
+                        printf("Quit signal received. Shutting down.\n");
+                        break;
+                    }
+
+                if (memcmp(&input, &prev_input, sizeof(KeyboardInput)) ) {
+                    state.input_x_force = input.force_x;
+                    state.input_y_force = input.force_y;
+                    //printf("Received from Keyboard: Force X = %d, Force Y = %d\n", input.force_x, input.force_y);
+
+                        }
+                    
+                }
+            }
         
 
         // Handle input from Obstacle Generator
@@ -203,26 +233,6 @@ start:
         }
 
 
-                    // Handle input from KeyboardManager
-            if (FD_ISSET(fd_Keyboard_to_server, &read_fds)) {
-                
-                ssize_t bytes_read = read(fd_Keyboard_to_server, &input, sizeof(KeyboardInput));
-                
-                if (bytes_read == sizeof(KeyboardInput)) {
-                    if (input.quit) {
-                        printf("Quit signal received. Shutting down.\n");
-                        break;
-                    }
-
-                if (memcmp(&input, &prev_input, sizeof(KeyboardInput)) ) {
-                    state.input_x_force = input.force_x;
-                    state.input_y_force = input.force_y;
-                    //printf("Received from Keyboard: Force X = %d, Force Y = %d\n", input.force_x, input.force_y);
-
-                        }
-                    
-                }
-            }
 
 
         // Send updated state to GameWindow
@@ -240,7 +250,7 @@ start:
             if (prev_input.force_x!= input.force_x || prev_input.force_y!= input.force_y || new_obstacle_arrived)
             {
 
-            printf("i am sending to the dynamics now %d %d \n",state.input_x_force,state.input_y_force);
+            //printf("i am sending to the dynamics now %d %d \n",state.input_x_force,state.input_y_force);
 
             if(!reset){
                 
@@ -260,7 +270,7 @@ start:
                 if (bytes_read == sizeof(ServerState)) {
                     // Enforce geofence boundaries
 
-                    printf("Updated state received from DroneDynamics %f\n ",state.drone_x);
+                    //printf("Updated state received from DroneDynamics %f\n ",state.drone_x);
                 }
 
 
@@ -268,6 +278,25 @@ start:
 
 
     }
+    
+
+    
+    // Fork and run the watchdog process in a new terminal
+    
+  /*  if(fifo_id==0){
+    pid_t pid = fork();
+    if (pid == 0) {
+        char watchdog_path[300];
+        realpath("../WatchDog/WatchDog", watchdog_path);
+        execlp("gnome-terminal", "gnome-terminal", "--", watchdog_path, NULL);
+        perror("execlp failed");
+        exit(EXIT_FAILURE);
+    } else if (pid < 0) {
+        perror("fork failed");
+        exit(EXIT_FAILURE);
+    }
+
+    }*/
     
     if (reset){
     

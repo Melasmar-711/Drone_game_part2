@@ -82,6 +82,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+cleanup() {
+    echo "Terminating background processes..."
+    pkill -P $$  # Kill all child processes of this script
+    exit 0
+}
+
+# Trap SIGINT (Ctrl+C) and call the cleanup function
+trap cleanup SIGINT
+
 # Start the processes (you can specify paths for log files or they will be generated later)
 gnome-terminal -- ./BlackBoardServer/BlackBoardServer &
 gnome-terminal -- ./DroneDynamicsManager/DroneDynamicsManager &
@@ -90,7 +99,7 @@ gnome-terminal -- ./KeyboardManager/KeyboardManager "$MODE" &
 
 if [ "$MODE" == "publisher" ]; then
     gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
-
+    gnome-terminal -- ./Obstacles_publisher_subscriber/Obstacles "$MODE" &
 fi
 
 if [ "$MODE" == "subscriber" ]; then
@@ -111,5 +120,5 @@ gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator "$MODE" &
 
 
 
-sleep 2
-gnome-terminal -- ./WatchDog/WatchDog &
+#sleep 2
+#gnome-terminal -- ./WatchDog/WatchDog &
