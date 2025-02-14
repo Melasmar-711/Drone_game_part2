@@ -12,6 +12,8 @@ This project implements a real-time drone navigation system using shared memory 
 - FasrDDS v3.1.0
 
 ## Installation
+
+# **Make sure to  uncomment ROS2 environment if you have it in your baschrc**
 1. `git clone https://github.com/Melasmar-711/Drone_game_part2.git `
 2. Ensure all dependencies are installed .
 3. set the values you wish to cJson file.
