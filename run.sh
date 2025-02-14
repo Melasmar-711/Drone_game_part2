@@ -109,9 +109,14 @@ start_subscriber() {
 
 if [ "$MODE" == "publisher" ]; then
     start_publisher
+    wait
 elif [ "$MODE" == "subscriber" ]; then
     start_subscriber
+    wait
 elif [ "$MODE" == "both" ]; then
     start_publisher
     start_subscriber
+    wait
 fi
+
+
