@@ -51,6 +51,7 @@ ObstaclesSubscriberApp::ObstaclesSubscriberApp(const int& domain_id)
 {
     // Create the participant
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
+    pqos.setup_transports(eprosima::fastdds::rtps::BuiltinTransports::LARGE_DATA);
     pqos.name("Obstacles_sub_participant");
     factory_ = DomainParticipantFactory::get_shared_instance();
     participant_ = factory_->create_participant(domain_id, pqos, nullptr, StatusMask::none());

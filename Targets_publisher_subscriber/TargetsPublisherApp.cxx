@@ -66,30 +66,7 @@ TargetsPublisherApp::TargetsPublisherApp(
 
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
 
-   /* 
-    pqos.transport().use_builtin_transports = false;
-
-    // ✅ Use TCPv4TransportDescriptor instead of TCPTransportDescriptor
-    std::shared_ptr<TCPv4TransportDescriptor> tcp_transport =std::make_shared<TCPv4TransportDescriptor>();
-
-    // ✅ Configure the TCP transport
-    tcp_transport->sendBufferSize = 131072;
-    tcp_transport->receiveBufferSize = 131072;
-    tcp_transport->add_listener_port(5100);
-
-    // ✅ Add TCP transport to QoS
-    pqos.transport().user_transports.push_back(tcp_transport);
-
-
-   // Set initial peers for discovery
-    Locator_t initial_peer;
-    initial_peer.kind = LOCATOR_KIND_TCPv4; // Use TCPv4
-    IPLocator::setIPv4(initial_peer, "127.0.0.1"); // Set IP address
-    initial_peer.port = 5101; // Subscriber's port
-    pqos.wire_protocol().builtin.initialPeersList.push_back(initial_peer);
-
-*/
-
+    pqos.setup_transports(eprosima::fastdds::rtps::BuiltinTransports::LARGE_DATA);
 
     pqos.name("Targets_pub_participant");
 

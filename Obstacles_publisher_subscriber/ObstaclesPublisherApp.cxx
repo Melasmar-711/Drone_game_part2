@@ -37,22 +37,8 @@ ObstaclesPublisherApp::ObstaclesPublisherApp(
     , stop_(false)
 {
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
-   // pqos.transport().use_builtin_transports = false;
+    pqos.setup_transports(eprosima::fastdds::rtps::BuiltinTransports::LARGE_DATA);
 
-    //std::shared_ptr<TCPv4TransportDescriptor> tcp_transport = std::make_shared<TCPv4TransportDescriptor>();
-    //tcp_transport->sendBufferSize = 131072;
-    //tcp_transport->receiveBufferSize = 131072;
-    //tcp_transport->add_listener_port(5200);
-
-   // pqos.transport().user_transports.push_back(tcp_transport);
-
-   // Locator_t initial_peer;
-    //initial_peer.kind = LOCATOR_KIND_TCPv4;
-   // IPLocator::setIPv4(initial_peer, "127.0.0.1");
-   // initial_peer.port = 5201;
-   // pqos.wire_protocol().builtin.initialPeersList.push_back(initial_peer);
-
-    //pqos.name("Obstacles_pub_participant");
     
     factory_ = DomainParticipantFactory::get_shared_instance();
     participant_ = factory_->create_participant(domain_id, pqos, nullptr, StatusMask::none());
