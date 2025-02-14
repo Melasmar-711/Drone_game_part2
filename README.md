@@ -79,9 +79,9 @@ Below is a text-based diagram illustrating the communication between different n
 |   |Obstacle_Generator |       |  Targets_Generator|    |
 |   |                   |       |                   |    |
 |   +---------+---------+       +---------+---------+    |
-|           |                           |                |
-|           |                           |                |
-|           v                           v                |
+|             |                           |              |
+|             |                           |              |
+|             v                           v              |
 |   +---------+---------+       +---------+---------+    |
 |   |                   |       |                   |    |
 |   |Obstacles_publisher|       |  Targets_publisher|    |
@@ -102,16 +102,16 @@ Below is a text-based diagram illustrating the communication between different n
 |   |Obstacle_subscriber|     |Targets_subscriber |      |    |                      |
 |   |                   |     |                   |      |    |WatchDog Monitoring   |
 |   +---------+---------+     +---------+---------+      |    |                      |
-|           |                           |                |    +----------------------+
-|           |                           |                |
-|           v                           v                |
+|             |                         |                |    +----------------------+
+|             |                         |                |
+|             v                         v                |
 |   +---------+---------+       +---------+---------+    |
 |   |                   |       |                   |    |
 |   |Obstacle_Generator |       |Targets_Generator  |    |
 |   |                   |       |                   |    |
 |   +---------+---------+       +---------+---------+    |
-|           |                           |                |
-|           v                           v                |
+|             |                           |              |
+|             v                           v              |
 |        =---------------------------------------+       |
 |        |                                       |       -------+---------------------|
 |        |                                       |              |                     |
