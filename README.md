@@ -114,7 +114,7 @@ Below is a text-based diagram illustrating the communication between different n
 |             v                           v              |
 |        =---------------------------------------+       |
 |        |                                       |       +------+---------------------|
-|        |                                       |              |                     |
+|        |                                       |    FIFO      |                     |
 |        |                                       |------------> |    GameWindow       |
 |        |           BlackBoardServer            |              |                     |
 |        |                                       |       +------+---------------------+
