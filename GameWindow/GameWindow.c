@@ -30,6 +30,7 @@ int main() {
     struct timeval timeout = {0, 0};
 
     log_message(log_file, INFO, "GameWindow started successfully.");
+    //bool just_got_reset=false;
 
 start:
 

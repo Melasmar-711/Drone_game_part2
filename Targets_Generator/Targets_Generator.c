@@ -179,8 +179,8 @@ start:
         if (bytes_written == -1) {
             perror("Error writing to FIFO");
             close(fd_target_generator_to_server);
-            return 1;
-        } else {
+        } 
+        else {
             printf("Successfully wrote %zd bytes to server FIFO.\n", bytes_written);
         }
         log_message(log_file, INFO, "TargetsGenerator sending targets.");

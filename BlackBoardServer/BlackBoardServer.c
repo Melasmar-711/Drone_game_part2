@@ -23,6 +23,12 @@ int main() {
 
     bool just_once=true;
     reset=false;
+    int new_targets[MAX_TARGETS][2]={0};
+    int new_obstacles[MAX_OBSTACLES][2];
+
+    bool targets_reset=true;
+
+
 
 start:
 
@@ -32,6 +38,7 @@ start:
 
         fifo_id++;
         reset=false;
+        targets_reset=true;
         
         usleep(300000);
 
@@ -45,7 +52,7 @@ start:
     int fd_Dynamics_to_server = create_and_open_fifo("/tmp/DroneDynamics_to_server_%d",fifo_id, O_RDONLY|O_NONBLOCK);
 
     int fd_server_to_GameWindow = create_and_open_fifo("/tmp/server_to_GameWindow_%d",fifo_id, O_WRONLY);
-    int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d",fifo_id, O_RDONLY );
+    int fd_target_generator_to_server = create_and_open_fifo("/tmp/target_generator_to_server_%d",fifo_id, O_RDONLY|O_NONBLOCK );
     int fd_obstacle_generator_to_server = create_and_open_fifo("/tmp/obstacle_generator_to_server_%d",fifo_id, O_RDONLY|O_NONBLOCK );
 
 
@@ -154,45 +161,7 @@ start:
         
 
 
-
-
-
-        // Handle input from Target Generator
-        if (FD_ISSET(fd_target_generator_to_server, &read_fds)) {
-            int new_targets[MAX_TARGETS][2];
-            ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
-            
-                // Copy data into state struct
-                memcpy(state.targets, new_targets, sizeof(new_targets));
-                state.num_targets = n_targets;
-
-            for (int i = 0; i < n_targets; i++) {
-                printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
-            }
-            
-        }
-        else{
-            if (just_once==true&&fifo_id==0 )
-            {
-                printf("I am generating the targets now\n");
-
-                //generate some random targets and put them in the state struct using a for loop
-                for (int i = 0; i < n_targets; i++) {
-                    state.targets[i][0] = rand() % 70;
-                    state.targets[i][1] = rand() % 27;
-                    printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
-
-                }
-                just_once=false;
-
-
-                
-            }
-
-        }
-
-                    // Handle input from KeyboardManager
-            if (FD_ISSET(fd_Keyboard_to_server, &read_fds)) {
+        if (FD_ISSET(fd_Keyboard_to_server, &read_fds)) {
                 
                 ssize_t bytes_read = read(fd_Keyboard_to_server, &input, sizeof(KeyboardInput));
                 
@@ -211,11 +180,31 @@ start:
                     
                 }
             }
+
+            // Handle input from Target Generator
+            if (FD_ISSET(fd_target_generator_to_server, &read_fds) && targets_reset) {
+                ssize_t bytes_read = read(fd_target_generator_to_server, new_targets, sizeof(new_targets));
+                
+                // Copy data into state struct
+                if (bytes_read == sizeof(new_targets)) {
+                for (int i = 0; i < n_targets; i++) {
+                    state.targets[i][0] = new_targets[i][0];
+                    state.targets[i][1] = new_targets[i][1];
+                    printf("Target %d: (%d, %d)\n", i, state.targets[i][0], state.targets[i][1]);
+                }   
+                
+                printf("Targets received successfully.\n");
+        
+                }
+            } 
+            
+
+                    // Handle input from KeyboardManager
+
         
 
         // Handle input from Obstacle Generator
         if (FD_ISSET(fd_obstacle_generator_to_server, &read_fds)) {
-            int new_obstacles[MAX_OBSTACLES][2];
             ssize_t bytes_read = read(fd_obstacle_generator_to_server, new_obstacles, sizeof(new_obstacles));
             if (bytes_read == sizeof(new_obstacles)) {
                 // Copy data into state struct
@@ -267,6 +256,14 @@ start:
         // Handle input from DroneDynamics
             if (FD_ISSET(fd_Dynamics_to_server, &read_fds)) {
                 ssize_t bytes_read = read(fd_Dynamics_to_server, &state, sizeof(ServerState));
+                
+                //set the state.targets to the new_targets just in case they come back from the drone damaged set them to last value
+                for (int i = 0; i < n_targets; i++) {
+                    state.targets[i][0] = new_targets[i][0];
+                    state.targets[i][1] = new_targets[i][1];
+                }
+                
+
                 if (bytes_read == sizeof(ServerState)) {
                     // Enforce geofence boundaries
 

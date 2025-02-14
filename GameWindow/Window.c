@@ -2,9 +2,8 @@
 #include"Window.h"
 
 
-bool just_got_reset=false;
 
-
+bool just_got_reset;
 
 void init_ncurses() {
     initscr();
@@ -41,7 +40,7 @@ void draw_borders(int MAX_X, int MAX_Y) {
 void draw_simulation(ServerState *prev_state, ServerState *current_state,int *flags) {
 
 
-    // Handle the drone position
+     // Handle the drone position
     if (prev_state->drone_x != current_state->drone_x || prev_state->drone_y != current_state->drone_y) 
     {
         // Erase old drone position
@@ -87,13 +86,13 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         }
     }
 
-    attroff(COLOR_PAIR(3));
+        attroff(COLOR_PAIR(3));
     
 
 
 
 
-
+    
     // Handle targets
     /*Handle whether targets were collected , increasedd ,decreased*/
     for (int i = 0; i < prev_state->num_targets; i++) {
@@ -123,7 +122,7 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
         
 
 
-
+        
         if (flags[i]==1 ) 
         {
             // Target removed
@@ -134,11 +133,16 @@ void draw_simulation(ServerState *prev_state, ServerState *current_state,int *fl
  
 
 
-
+ 
         if (prev_state->targets[i][0] != current_state->targets[i][0] || prev_state->targets[i][1] != current_state->targets[i][1])      
         {
-                mvprintw(prev_state->targets[i][1], prev_state->targets[i][0], " "); // Erase old position                
+
+
+                mvprintw(prev_state->targets[i][1], prev_state->targets[i][0], " "); // Erase old position
+                
                 mvprintw(current_state->targets[i][1], current_state->targets[i][0], "T"); // Draw new position
+
+
         }
 
 

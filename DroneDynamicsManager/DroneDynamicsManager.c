@@ -81,14 +81,7 @@ start:
 
     ServerState prev_state = initialize_server_state(n_obstacles, n_targets);
 
-
-
-
-
-
-
-
-    
+        
     while (true) {
 
 
