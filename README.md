@@ -74,7 +74,7 @@ Below is a text-based diagram illustrating the communication between different n
 +---------------------------------------------------------
 |                    PublisherModule                     |
 |                                                        |
-| +-------------------+       +-------------------+      |
+|   +-------------------+       +-------------------+    |
 |   |                   |       |                   |    |
 |   |  Obstacle_Generator  |       |  Targets_Generator  |
 |   |                   |       |                   |    |
