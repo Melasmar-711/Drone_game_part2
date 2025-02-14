@@ -66,7 +66,7 @@ TargetsPublisherApp::TargetsPublisherApp(
 
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
 
-    
+   /* 
     pqos.transport().use_builtin_transports = false;
 
     // ✅ Use TCPv4TransportDescriptor instead of TCPTransportDescriptor
@@ -88,7 +88,7 @@ TargetsPublisherApp::TargetsPublisherApp(
     initial_peer.port = 5101; // Subscriber's port
     pqos.wire_protocol().builtin.initialPeersList.push_back(initial_peer);
 
-
+*/
 
 
     pqos.name("Targets_pub_participant");

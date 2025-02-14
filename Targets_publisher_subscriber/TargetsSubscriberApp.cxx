@@ -53,7 +53,7 @@ TargetsSubscriberApp::TargetsSubscriberApp(const int& domain_id)
     DomainParticipantQos pqos = PARTICIPANT_QOS_DEFAULT;
     pqos.name("Targets_sub_participant");
     factory_ = DomainParticipantFactory::get_shared_instance();
-    participant_ = factory_->create_participant(1, pqos, nullptr, StatusMask::none());
+    participant_ = factory_->create_participant(domain_id, pqos, nullptr, StatusMask::none());
     if (participant_ == nullptr)
     {
         throw std::runtime_error("Targets Participant initialization failed");

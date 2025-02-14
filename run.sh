@@ -1,10 +1,8 @@
 #!/bin/bash
 
-
-
 # Check if the correct number of arguments is provided
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <subscriber|publisher>"
+    echo "Usage: $0 <subscriber|publisher|both>"
     exit 1
 fi
 
@@ -12,12 +10,10 @@ fi
 MODE=$1
 
 # Validate the argument
-if [ "$MODE" != "subscriber" ] && [ "$MODE" != "publisher" ]; then
-    echo "Invalid argument: $MODE. Use 'subscriber' or 'publisher'."
+if [ "$MODE" != "subscriber" ] && [ "$MODE" != "publisher" ] && [ "$MODE" != "both" ]; then
+    echo "Invalid argument: $MODE. Use 'subscriber', 'publisher', or 'both'."
     exit 1
 fi
-
-
 
 # Clean up any existing blackboard pipe (if it exists)
 if [ -e "blackboard_pipe" ]; then
@@ -92,33 +88,30 @@ cleanup() {
 trap cleanup SIGINT
 
 # Start the processes (you can specify paths for log files or they will be generated later)
-gnome-terminal -- ./BlackBoardServer/BlackBoardServer &
-gnome-terminal -- ./DroneDynamicsManager/DroneDynamicsManager &
-gnome-terminal --geometry=110x40+0+0 -- bash -c "./GameWindow/GameWindow; exec bash" &
-gnome-terminal -- ./KeyboardManager/KeyboardManager "$MODE" &
+
+start_publisher() {
+    gnome-terminal --geometry=80x24+0+0 -- ./Targets_publisher_subscriber/Targets "publisher" &
+    gnome-terminal --geometry=80x24+800+0 -- ./Obstacles_publisher_subscriber/Obstacles "publisher" &
+    gnome-terminal --geometry=80x24+0+600 -- ./Targets_Generator/Targets_Generator "publisher" &
+    gnome-terminal --geometry=80x24+800+600 -- ./Obstacle_Generator/Obstacle_Generator "publisher" &
+}
+
+start_subscriber() {
+    gnome-terminal --geometry=80x24+0+0 -- ./BlackBoardServer/BlackBoardServer &
+    gnome-terminal --geometry=80x24+960+0 -- ./DroneDynamicsManager/DroneDynamicsManager &
+    gnome-terminal --geometry=110x40+0+540 -- bash -c "./GameWindow/GameWindow; exec bash" &
+    gnome-terminal --geometry=80x24+960+540 -- ./KeyboardManager/KeyboardManager "subscriber" &
+    gnome-terminal --geometry=80x24+0+1080 -- ./Targets_publisher_subscriber/Targets "subscriber" &
+    gnome-terminal --geometry=80x24+960+1080 -- ./Obstacles_publisher_subscriber/Obstacles "subscriber" &
+    gnome-terminal --geometry=80x24+0+1620 -- ./Targets_Generator/Targets_Generator "subscriber" &
+    gnome-terminal --geometry=80x24+960+1620 -- ./Obstacle_Generator/Obstacle_Generator "subscriber" &
+}
 
 if [ "$MODE" == "publisher" ]; then
-    gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
-    gnome-terminal -- ./Obstacles_publisher_subscriber/Obstacles "$MODE" &
+    start_publisher
+elif [ "$MODE" == "subscriber" ]; then
+    start_subscriber
+elif [ "$MODE" == "both" ]; then
+    start_publisher
+    start_subscriber
 fi
-
-if [ "$MODE" == "subscriber" ]; then
-    gnome-terminal -- ./Targets_publisher_subscriber/Targets "$MODE" &
-    gnome-terminal -- ./Obstacles_publisher_subscriber/Obstacles "$MODE" &
-fi
-
-
-
-
-gnome-terminal -- ./Targets_Generator/Targets_Generator "$MODE" &
-gnome-terminal -- ./Obstacle_Generator/Obstacle_Generator "$MODE" &
-
-
-
-#if the mdoe is publiser run the publisher
-
-
-
-
-#sleep 2
-#gnome-terminal -- ./WatchDog/WatchDog &
