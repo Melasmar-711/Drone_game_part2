@@ -44,8 +44,8 @@ This project implements a real-time drone navigation system using shared memory 
 
 ## Test Runs
 Here are some videos demonstrating the system in action:
-- [Basic Movement Demo](#)
-- [Full System Test](#)
+[![publisher on computer 1](https://img.youtube.com/vi/iUaE7SXDCnQ/0.jpg)](https://youtu.be/iUaE7SXDCnQ)
+[![oublisher on computer 2](https://img.youtube.com/vi/oEts9y3KurE/0.jpg)](https://youtu.be/oEts9y3KurE)
 
 ## Project Structure
 

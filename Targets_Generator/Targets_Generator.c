@@ -165,7 +165,7 @@ start:
         printf("Received %d targets.\n", num_targets);
 
         int targets[MAX_TARGETS][2] = {0};
-
+    
         for (int i = 0; i < n_targets; i++) {
             targets[i][0] = targets_from_subscriber.targets[i][0];
             targets[i][1] = targets_from_subscriber.targets[i][1];
