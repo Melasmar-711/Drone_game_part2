@@ -91,7 +91,7 @@ Below is a text-based diagram illustrating the communication between different n
 |                                                        |
 +--------------------------------------------------------+
                         |
-                        |
+    Targets_Topic       |       Obstacles_Topic           #that's why it's portable since publisher publishing the same topics shall work if placed here
                         |
                         v
 +--------------------------------------------------------+
