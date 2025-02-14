@@ -76,7 +76,7 @@ Below is a text-based diagram illustrating the communication between different n
 |                                                        |
 |   +-------------------+       +-------------------+    |
 |   |                   |       |                   |    |
-|   |  Obstacle_Generator  |       |  Targets_Generator  |
+|   |Obstacle_Generator |       |  Targets_Generator|    |
 |   |                   |       |                   |    |
 |   +---------+---------+       +---------+---------+    |
 |           |                           |                |
@@ -84,10 +84,10 @@ Below is a text-based diagram illustrating the communication between different n
 |           v                           v                |
 |   +---------+---------+       +---------+---------+    |
 |   |                   |       |                   |    |
-|   |  Obstacles_publisher  |       |  Targets_publisher |
+|   |Obstacles_publisher|       |  Targets_publisher|    |
 |   |                   |       |                   |    |
 |   +---------+---------+       +---------+---------+    |
-|           |                           |                |
+|                                                        |
 |                                                        |
 +--------------------------------------------------------+
                         |
